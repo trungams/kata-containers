@@ -113,6 +113,9 @@ standard-oci-runtime = ["rustjail/standard-oci-runtime"]
 agent-policy = ["kata-agent-policy"]
 guest-pull = ["image-rs/kata-cc-rustls-tls"]
 
+[lints.rust]
+ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
+
 [[bin]]
 name = "kata-agent"
 path = "src/main.rs"

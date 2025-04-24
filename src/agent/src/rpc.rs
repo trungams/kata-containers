@@ -193,9 +193,9 @@ impl<T> OptionToTtrpcResult<T> for Option<T> {
 
 #[derive(Clone, Debug)]
 pub struct AgentService {
-    sandbox: Arc<Mutex<Sandbox>>,
-    init_mode: bool,
-    oma: Option<mem_agent::agent::MemAgent>,
+    pub sandbox: Arc<Mutex<Sandbox>>,
+    pub init_mode: bool,
+    pub oma: Option<mem_agent::agent::MemAgent>,
 }
 
 impl AgentService {
@@ -204,6 +204,10 @@ impl AgentService {
         &self,
         req: protocols::agent::CreateContainerRequest,
     ) -> Result<()> {
+        if true {
+            return Ok(());
+        }
+
         // create the proc_io first, in case there's some error occur below, thus we can make sure
         // the io stream closed when error occur.
         let proc_io = if AGENT_CONFIG.passfd_listener_port != 0 {
@@ -384,6 +388,10 @@ impl AgentService {
         &self,
         req: protocols::agent::RemoveContainerRequest,
     ) -> Result<()> {
+        if true {
+            return Ok(());
+        }
+
         let cid = req.container_id;
 
         // Drop the host guest mapping for this container so we can reuse the
