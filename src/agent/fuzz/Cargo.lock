@@ -2130,6 +2130,7 @@ dependencies = [
  "libfuzzer-sys",
  "protobuf 3.7.1",
  "protocols",
+ "rand",
  "tokio",
  "ttrpc",
 ]

@@ -627,7 +627,6 @@ use std::os::unix::io::{FromRawFd, RawFd};
 use kata_agent_policy::policy::AgentPolicy;
 
 #[cfg(fuzzing)]
-#[cfg(fuzzing)]
 pub mod fuzz_logic {
     use super::*;
     use protocols::agent_ttrpc_async as agent_ttrpc;
@@ -714,11 +713,7 @@ pub mod fuzz_logic {
             _ort = Some(rt);
         }
 
-        let agent_service = rpc::AgentService {
-            sandbox: sandbox.clone(),
-            init_mode,
-            oma,
-        };
+        let agent_service = rpc::AgentService::new(sandbox.clone(), init_mode, oma);
         let agent_arc_box: Arc<Box<dyn agent_ttrpc::AgentService + Send + Sync>> =
             Arc::new(Box::new(agent_service));
         let aservice = agent_ttrpc::create_agent_service(agent_arc_box.clone());
@@ -728,9 +723,6 @@ pub mod fuzz_logic {
         *AGENT_SERVICE.lock().unwrap() = Some(agent_arc_box.clone());
 
         Ok(())
-        // server.start().await?;
-        // rx.await?;
-        // server.shutdown().await?;
     }
 
     pub fn init_agent() -> Result<()> {

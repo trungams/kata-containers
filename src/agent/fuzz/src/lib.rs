@@ -1,1 +1,2 @@
-pub mod fuzz_proto_types;
+pub mod fuzz_proto;
+pub mod rpc_util;

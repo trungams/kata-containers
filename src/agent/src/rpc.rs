@@ -193,21 +193,29 @@ impl<T> OptionToTtrpcResult<T> for Option<T> {
 
 #[derive(Clone, Debug)]
 pub struct AgentService {
-    pub sandbox: Arc<Mutex<Sandbox>>,
-    pub init_mode: bool,
-    pub oma: Option<mem_agent::agent::MemAgent>,
+    sandbox: Arc<Mutex<Sandbox>>,
+    init_mode: bool,
+    oma: Option<mem_agent::agent::MemAgent>,
 }
 
 impl AgentService {
+    pub fn new(
+        sandbox: Arc<Mutex<Sandbox>>,
+        init_mode: bool,
+        oma: Option<mem_agent::agent::MemAgent>,
+    ) -> Self {
+        Self {
+            sandbox,
+            init_mode,
+            oma,
+        }
+    }
+
     #[instrument]
     async fn do_create_container(
         &self,
         req: protocols::agent::CreateContainerRequest,
     ) -> Result<()> {
-        if true {
-            return Ok(());
-        }
-
         // create the proc_io first, in case there's some error occur below, thus we can make sure
         // the io stream closed when error occur.
         let proc_io = if AGENT_CONFIG.passfd_listener_port != 0 {
@@ -388,10 +396,6 @@ impl AgentService {
         &self,
         req: protocols::agent::RemoveContainerRequest,
     ) -> Result<()> {
-        if true {
-            return Ok(());
-        }
-
         let cid = req.container_id;
 
         // Drop the host guest mapping for this container so we can reuse the
@@ -1800,11 +1804,8 @@ pub async fn start(
     init_mode: bool,
     oma: Option<mem_agent::agent::MemAgent>,
 ) -> Result<TtrpcServer> {
-    let agent_service = Box::new(AgentService {
-        sandbox: s,
-        init_mode,
-        oma,
-    }) as Box<dyn agent_ttrpc::AgentService + Send + Sync>;
+    let agent_service = Box::new(AgentService::new(s, init_mode, oma))
+        as Box<dyn agent_ttrpc::AgentService + Send + Sync>;
     let aservice = agent_ttrpc::create_agent_service(Arc::new(agent_service));
 
     let health_service = Box::new(HealthService {}) as Box<dyn health_ttrpc::Health + Send + Sync>;
@@ -2463,11 +2464,7 @@ mod tests {
         let logger = slog::Logger::root(slog::Discard, o!());
         let sandbox = Sandbox::new(&logger).unwrap();
 
-        let agent_service = Box::new(AgentService {
-            sandbox: Arc::new(Mutex::new(sandbox)),
-            init_mode: true,
-            oma: None,
-        });
+        let agent_service = Box::new(AgentService::new(Arc::new(Mutex::new(sandbox)), true, None));
 
         let req = protocols::agent::UpdateInterfaceRequest::default();
         let ctx = mk_ttrpc_context();
@@ -2481,11 +2478,7 @@ mod tests {
     async fn test_update_routes() {
         let logger = slog::Logger::root(slog::Discard, o!());
         let sandbox = Sandbox::new(&logger).unwrap();
-        let agent_service = Box::new(AgentService {
-            sandbox: Arc::new(Mutex::new(sandbox)),
-            init_mode: true,
-            oma: None,
-        });
+        let agent_service = Box::new(AgentService::new(Arc::new(Mutex::new(sandbox)), true, None));
 
         let req = protocols::agent::UpdateRoutesRequest::default();
         let ctx = mk_ttrpc_context();
@@ -2499,11 +2492,7 @@ mod tests {
     async fn test_add_arp_neighbors() {
         let logger = slog::Logger::root(slog::Discard, o!());
         let sandbox = Sandbox::new(&logger).unwrap();
-        let agent_service = Box::new(AgentService {
-            sandbox: Arc::new(Mutex::new(sandbox)),
-            init_mode: true,
-            oma: None,
-        });
+        let agent_service = Box::new(AgentService::new(Arc::new(Mutex::new(sandbox)), true, None));
 
         let req = protocols::agent::AddARPNeighborsRequest::default();
         let ctx = mk_ttrpc_context();
@@ -2638,11 +2627,8 @@ mod tests {
                 sandbox.add_container(linux_container);
             }
 
-            let agent_service = Box::new(AgentService {
-                sandbox: Arc::new(Mutex::new(sandbox)),
-                init_mode: true,
-                oma: None,
-            });
+            let agent_service =
+                Box::new(AgentService::new(Arc::new(Mutex::new(sandbox)), true, None));
 
             let result = agent_service
                 .do_write_stream(protocols::agent::WriteStreamRequest {
@@ -3129,11 +3115,7 @@ OtherField:other
 
         let logger = slog::Logger::root(slog::Discard, o!());
         let sandbox = Sandbox::new(&logger).unwrap();
-        let agent_service = Box::new(AgentService {
-            sandbox: Arc::new(Mutex::new(sandbox)),
-            init_mode: true,
-            oma: None,
-        });
+        let agent_service = Box::new(AgentService::new(Arc::new(Mutex::new(sandbox)), true, None));
 
         let ctx = mk_ttrpc_context();
 

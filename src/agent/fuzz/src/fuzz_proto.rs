@@ -1,3 +1,4 @@
+use crate::rpc_util;
 use libfuzzer_sys::arbitrary::Arbitrary;
 use protobuf::{EnumOrUnknown, MessageField};
 use protocols::agent as agent_proto;
@@ -5,7 +6,7 @@ use protocols::oci as oci_proto;
 use protocols::types as types_proto;
 use std::collections::HashMap;
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzStringUser {
     pub uid: String,
     pub gid: String,
@@ -23,7 +24,7 @@ impl From<FuzzStringUser> for agent_proto::StringUser {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzDevice {
     pub id: String,
     pub type_: String,
@@ -51,6 +52,12 @@ pub enum FuzzFSGroupChangePolicy {
     OnRootMismatch = 1,
 }
 
+impl Default for FuzzFSGroupChangePolicy {
+    fn default() -> Self {
+        FuzzFSGroupChangePolicy::Always
+    }
+}
+
 impl From<FuzzFSGroupChangePolicy> for types_proto::FSGroupChangePolicy {
     fn from(f: FuzzFSGroupChangePolicy) -> Self {
         match f {
@@ -60,7 +67,7 @@ impl From<FuzzFSGroupChangePolicy> for types_proto::FSGroupChangePolicy {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzFSGroup {
     pub group_id: u32,
     pub group_change_policy: FuzzFSGroupChangePolicy,
@@ -76,7 +83,7 @@ impl From<FuzzFSGroup> for agent_proto::FSGroup {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzStorage {
     pub driver: String,
     pub driver_options: Vec<String>,
@@ -84,7 +91,7 @@ pub struct FuzzStorage {
     pub fstype: String,
     pub options: Vec<String>,
     pub mount_point: String,
-    pub fs_group: FuzzFSGroup,
+    pub fs_group: Option<FuzzFSGroup>,
 }
 
 impl From<FuzzStorage> for agent_proto::Storage {
@@ -96,13 +103,13 @@ impl From<FuzzStorage> for agent_proto::Storage {
             fstype: f.fstype.clone(),
             options: f.options.clone(),
             mount_point: f.mount_point.clone(),
-            fs_group: MessageField::some(f.fs_group.into()),
+            fs_group: MessageField::from_option(f.fs_group.map(Into::into)),
             ..Default::default()
         }
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzBox {
     pub height: u32,
     pub width: u32,
@@ -118,7 +125,7 @@ impl From<FuzzBox> for oci_proto::Box {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzUser {
     pub uid: u32,
     pub gid: u32,
@@ -138,7 +145,7 @@ impl From<FuzzUser> for oci_proto::User {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxCapabilities {
     pub bounding: Vec<String>,
     pub effective: Vec<String>,
@@ -160,7 +167,7 @@ impl From<FuzzLinuxCapabilities> for oci_proto::LinuxCapabilities {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzPOSIXRlimit {
     pub type_: String,
     pub hard: u64,
@@ -178,15 +185,15 @@ impl From<FuzzPOSIXRlimit> for oci_proto::POSIXRlimit {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzProcess {
     pub terminal: bool,
-    pub console_size: FuzzBox,
-    pub user: FuzzUser,
+    pub console_size: Option<FuzzBox>,
+    pub user: Option<FuzzUser>,
     pub args: Vec<String>,
     pub env: Vec<String>,
     pub cwd: String,
-    pub capabilities: FuzzLinuxCapabilities,
+    pub capabilities: Option<FuzzLinuxCapabilities>,
     pub rlimits: Vec<FuzzPOSIXRlimit>,
     pub no_new_privileges: bool,
     pub apparmor_profile: String,
@@ -198,12 +205,12 @@ impl From<FuzzProcess> for oci_proto::Process {
     fn from(f: FuzzProcess) -> Self {
         Self {
             Terminal: f.terminal,
-            ConsoleSize: MessageField::some(f.console_size.into()),
-            User: MessageField::some(f.user.into()),
+            ConsoleSize: MessageField::from_option(f.console_size.map(Into::into)),
+            User: MessageField::from_option(f.user.map(Into::into)),
             Args: f.args.clone(),
             Env: f.env.clone(),
             Cwd: f.cwd.clone(),
-            Capabilities: MessageField::some(f.capabilities.into()),
+            Capabilities: MessageField::from_option(f.capabilities.map(Into::into)),
             Rlimits: f.rlimits.into_iter().map(Into::into).collect(),
             NoNewPrivileges: f.no_new_privileges,
             ApparmorProfile: f.apparmor_profile.clone(),
@@ -214,7 +221,7 @@ impl From<FuzzProcess> for oci_proto::Process {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzRoot {
     pub path: String,
     pub readonly: bool,
@@ -230,7 +237,7 @@ impl From<FuzzRoot> for oci_proto::Root {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzMount {
     pub destination: String,
     pub source: String,
@@ -250,7 +257,7 @@ impl From<FuzzMount> for oci_proto::Mount {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzHook {
     pub path: String,
     pub args: Vec<String>,
@@ -270,7 +277,7 @@ impl From<FuzzHook> for oci_proto::Hook {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzHooks {
     pub pre_start: Vec<FuzzHook>,
     pub post_start: Vec<FuzzHook>,
@@ -294,7 +301,7 @@ impl From<FuzzHooks> for oci_proto::Hooks {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxIDMapping {
     pub host_id: u32,
     pub container_id: u32,
@@ -312,7 +319,7 @@ impl From<FuzzLinuxIDMapping> for oci_proto::LinuxIDMapping {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxDeviceCgroup {
     pub allow: bool,
     pub type_: String,
@@ -334,7 +341,7 @@ impl From<FuzzLinuxDeviceCgroup> for oci_proto::LinuxDeviceCgroup {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxMemory {
     pub limit: i64,
     pub reservation: i64,
@@ -360,7 +367,7 @@ impl From<FuzzLinuxMemory> for oci_proto::LinuxMemory {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxCPU {
     pub shares: u64,
     pub quota: i64,
@@ -386,7 +393,7 @@ impl From<FuzzLinuxCPU> for oci_proto::LinuxCPU {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxPids {
     pub limit: i64,
 }
@@ -400,7 +407,7 @@ impl From<FuzzLinuxPids> for oci_proto::LinuxPids {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxWeightDevice {
     pub major: i64,
     pub minor: i64,
@@ -420,7 +427,7 @@ impl From<FuzzLinuxWeightDevice> for oci_proto::LinuxWeightDevice {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxThrottleDevice {
     pub major: i64,
     pub minor: i64,
@@ -438,7 +445,7 @@ impl From<FuzzLinuxThrottleDevice> for oci_proto::LinuxThrottleDevice {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxBlockIO {
     pub weight: u32,
     pub leaf_weight: u32,
@@ -480,7 +487,7 @@ impl From<FuzzLinuxBlockIO> for oci_proto::LinuxBlockIO {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxHugepageLimit {
     pub pagesize: String,
     pub limit: u64,
@@ -496,7 +503,7 @@ impl From<FuzzLinuxHugepageLimit> for oci_proto::LinuxHugepageLimit {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxInterfacePriority {
     pub name: String,
     pub priority: u32,
@@ -512,7 +519,7 @@ impl From<FuzzLinuxInterfacePriority> for oci_proto::LinuxInterfacePriority {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxNetwork {
     pub class_id: u32,
     pub priorities: Vec<FuzzLinuxInterfacePriority>,
@@ -528,33 +535,33 @@ impl From<FuzzLinuxNetwork> for oci_proto::LinuxNetwork {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxResources {
     pub devices: Vec<FuzzLinuxDeviceCgroup>,
-    pub memory: FuzzLinuxMemory,
-    pub cpu: FuzzLinuxCPU,
-    pub pids: FuzzLinuxPids,
-    pub block_io: FuzzLinuxBlockIO,
+    pub memory: Option<FuzzLinuxMemory>,
+    pub cpu: Option<FuzzLinuxCPU>,
+    pub pids: Option<FuzzLinuxPids>,
+    pub block_io: Option<FuzzLinuxBlockIO>,
     pub hugepage_limits: Vec<FuzzLinuxHugepageLimit>,
-    pub network: FuzzLinuxNetwork,
+    pub network: Option<FuzzLinuxNetwork>,
 }
 
 impl From<FuzzLinuxResources> for oci_proto::LinuxResources {
     fn from(f: FuzzLinuxResources) -> Self {
         Self {
             Devices: f.devices.into_iter().map(Into::into).collect(),
-            Memory: MessageField::some(f.memory.into()),
-            CPU: MessageField::some(f.cpu.into()),
-            Pids: MessageField::some(f.pids.into()),
-            BlockIO: MessageField::some(f.block_io.into()),
+            Memory: MessageField::from_option(f.memory.map(Into::into)),
+            CPU: MessageField::from_option(f.cpu.map(Into::into)),
+            Pids: MessageField::from_option(f.pids.map(Into::into)),
+            BlockIO: MessageField::from_option(f.block_io.map(Into::into)),
             HugepageLimits: f.hugepage_limits.into_iter().map(Into::into).collect(),
-            Network: MessageField::some(f.network.into()),
+            Network: MessageField::from_option(f.network.map(Into::into)),
             ..Default::default()
         }
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxNamespace {
     pub type_: String,
     pub path: String,
@@ -570,7 +577,7 @@ impl From<FuzzLinuxNamespace> for oci_proto::LinuxNamespace {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxDevice {
     pub path: String,
     pub type_: String,
@@ -601,6 +608,12 @@ pub enum FuzzErrnoRet {
     Errnoret(u32),
 }
 
+impl Default for FuzzErrnoRet {
+    fn default() -> Self {
+        FuzzErrnoRet::Errnoret(0)
+    }
+}
+
 impl From<FuzzErrnoRet> for oci_proto::linux_syscall::ErrnoRet {
     fn from(f: FuzzErrnoRet) -> Self {
         match f {
@@ -609,7 +622,7 @@ impl From<FuzzErrnoRet> for oci_proto::linux_syscall::ErrnoRet {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxSeccompArg {
     pub index: u64,
     pub value: u64,
@@ -629,7 +642,7 @@ impl From<FuzzLinuxSeccompArg> for oci_proto::LinuxSeccompArg {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxSyscall {
     pub names: Vec<String>,
     pub action: String,
@@ -652,7 +665,7 @@ impl From<FuzzLinuxSyscall> for oci_proto::LinuxSyscall {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxSeccomp {
     pub default_action: String,
     pub architectures: Vec<String>,
@@ -672,7 +685,7 @@ impl From<FuzzLinuxSeccomp> for oci_proto::LinuxSeccomp {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinuxIntelRdt {
     pub l3_cache_schema: String,
 }
@@ -686,21 +699,21 @@ impl From<FuzzLinuxIntelRdt> for oci_proto::LinuxIntelRdt {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzLinux {
     pub uid_mappings: Vec<FuzzLinuxIDMapping>,
     pub gid_mappings: Vec<FuzzLinuxIDMapping>,
     pub sysctl: HashMap<String, String>,
-    pub resources: FuzzLinuxResources,
+    pub resources: Option<FuzzLinuxResources>,
     pub cgroups_path: String,
     pub namespaces: Vec<FuzzLinuxNamespace>,
     pub devices: Vec<FuzzLinuxDevice>,
-    pub seccomp: FuzzLinuxSeccomp,
+    pub seccomp: Option<FuzzLinuxSeccomp>,
     pub rootfs_propagation: String,
     pub masked_paths: Vec<String>,
     pub readonly_paths: Vec<String>,
     pub mount_label: String,
-    pub intel_rdt: FuzzLinuxIntelRdt,
+    pub intel_rdt: Option<FuzzLinuxIntelRdt>,
 }
 
 impl From<FuzzLinux> for oci_proto::Linux {
@@ -709,52 +722,222 @@ impl From<FuzzLinux> for oci_proto::Linux {
             UIDMappings: f.uid_mappings.into_iter().map(Into::into).collect(),
             GIDMappings: f.gid_mappings.into_iter().map(Into::into).collect(),
             Sysctl: f.sysctl.clone(),
-            Resources: MessageField::some(f.resources.into()),
+            Resources: MessageField::from_option(f.resources.map(Into::into)),
             CgroupsPath: f.cgroups_path.clone(),
             Namespaces: f.namespaces.into_iter().map(Into::into).collect(),
             Devices: f.devices.into_iter().map(Into::into).collect(),
-            Seccomp: MessageField::some(f.seccomp.into()),
+            Seccomp: MessageField::from_option(f.seccomp.map(Into::into)),
             RootfsPropagation: f.rootfs_propagation.clone(),
             MaskedPaths: f.masked_paths.clone(),
             ReadonlyPaths: f.readonly_paths.clone(),
             MountLabel: f.mount_label.clone(),
-            IntelRdt: MessageField::some(f.intel_rdt.into()),
+            IntelRdt: MessageField::from_option(f.intel_rdt.map(Into::into)),
             ..Default::default()
         }
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzSpec {
     pub version: String,
-    pub process: FuzzProcess,
-    pub root: FuzzRoot,
+    pub process: Option<FuzzProcess>,
+    pub root: Option<FuzzRoot>,
     pub host_name: String,
     pub mounts: Vec<FuzzMount>,
-    pub hooks: FuzzHooks,
+    pub hooks: Option<FuzzHooks>,
     pub annotations: HashMap<String, String>,
-    pub linux: FuzzLinux,
-    // pub solaris: FuzzSolaris,
-    // pub windows: FuzzWindows,
+    pub linux: Option<FuzzLinux>,
+    // pub solaris: Option<FuzzSolaris>,
+    // pub windows: Option<FuzzWindows>,
+}
+
+impl FuzzSpec {
+    pub fn sample_spec() -> Self {
+        Self {
+            version: String::from("1.1.0-rc-1-test"),
+            process: Some(FuzzProcess {
+                env: vec![
+                    String::from(
+                        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    ),
+                    String::from("TERM=xterm"),
+                ],
+                cwd: String::from("/"),
+                capabilities: Some(FuzzLinuxCapabilities {
+                    bounding: vec![
+                        String::from("CAP_CHOWN"),
+                        String::from("CAP_DAC_OVERRIDE"),
+                        String::from("CAP_FSETID"),
+                        String::from("CAP_FOWNER"),
+                        String::from("CAP_MKNOD"),
+                        String::from("CAP_NET_RAW"),
+                        String::from("CAP_SETGID"),
+                        String::from("CAP_SETUID"),
+                        String::from("CAP_SETFCAP"),
+                        String::from("CAP_SETPCAP"),
+                        String::from("CAP_NET_BIND_SERVICE"),
+                        String::from("CAP_SYS_CHROOT"),
+                        String::from("CAP_KILL"),
+                        String::from("CAP_AUDIT_WRITE"),
+                    ],
+                    effective: vec![
+                        String::from("CAP_CHOWN"),
+                        String::from("CAP_DAC_OVERRIDE"),
+                        String::from("CAP_FSETID"),
+                        String::from("CAP_FOWNER"),
+                        String::from("CAP_MKNOD"),
+                        String::from("CAP_NET_RAW"),
+                        String::from("CAP_SETGID"),
+                        String::from("CAP_SETUID"),
+                        String::from("CAP_SETFCAP"),
+                        String::from("CAP_SETPCAP"),
+                        String::from("CAP_NET_BIND_SERVICE"),
+                        String::from("CAP_SYS_CHROOT"),
+                        String::from("CAP_KILL"),
+                        String::from("CAP_AUDIT_WRITE"),
+                    ],
+                    permitted: vec![
+                        String::from("CAP_CHOWN"),
+                        String::from("CAP_DAC_OVERRIDE"),
+                        String::from("CAP_FSETID"),
+                        String::from("CAP_FOWNER"),
+                        String::from("CAP_MKNOD"),
+                        String::from("CAP_NET_RAW"),
+                        String::from("CAP_SETGID"),
+                        String::from("CAP_SETUID"),
+                        String::from("CAP_SETFCAP"),
+                        String::from("CAP_SETPCAP"),
+                        String::from("CAP_NET_BIND_SERVICE"),
+                        String::from("CAP_SYS_CHROOT"),
+                        String::from("CAP_KILL"),
+                        String::from("CAP_AUDIT_WRITE"),
+                    ],
+                    ..Default::default()
+                }),
+                no_new_privileges: true,
+                ..Default::default()
+            }),
+            root: Some(FuzzRoot {
+                path: String::from("rootfs"),
+                readonly: true,
+            }),
+            mounts: vec![
+                FuzzMount {
+                    destination: String::from("/proc"),
+                    type_: String::from("proc"),
+                    source: String::from("proc"),
+                    options: vec![
+                        String::from("nosuid"),
+                        String::from("noexec"),
+                        String::from("nodev"),
+                    ],
+                },
+                FuzzMount {
+                    destination: String::from("/dev"),
+                    type_: String::from("tmpfs"),
+                    source: String::from("tmpfs"),
+                    options: vec![
+                        String::from("nosuid"),
+                        String::from("strictatime"),
+                        String::from("mode=755"),
+                        String::from("size=65536k"),
+                    ],
+                },
+                FuzzMount {
+                    destination: String::from("/dev/pts"),
+                    type_: String::from("devpts"),
+                    source: String::from("devpts"),
+                    options: vec![
+                        String::from("nosuid"),
+                        String::from("noexec"),
+                        String::from("newinstance"),
+                        String::from("ptmxmode=0666"),
+                        String::from("mode=0620"),
+                        String::from("gid=5"),
+                    ],
+                },
+                FuzzMount {
+                    destination: String::from("/dev/shm"),
+                    type_: String::from("tmpfs"),
+                    source: String::from("shm"),
+                    options: vec![
+                        String::from("nosuid"),
+                        String::from("noexec"),
+                        String::from("nodev"),
+                        String::from("mode=1777"),
+                        String::from("size=65536k"),
+                    ],
+                },
+                FuzzMount {
+                    destination: String::from("/dev/mqueue"),
+                    type_: String::from("mqueue"),
+                    source: String::from("mqueue"),
+                    options: vec![
+                        String::from("nosuid"),
+                        String::from("noexec"),
+                        String::from("nodev"),
+                    ],
+                },
+                FuzzMount {
+                    destination: String::from("/sys"),
+                    type_: String::from("sysfs"),
+                    source: String::from("sysfs"),
+                    options: vec![
+                        String::from("nosuid"),
+                        String::from("noexec"),
+                        String::from("nodev"),
+                        String::from("ro"),
+                    ],
+                },
+            ],
+            // missing annotations
+            linux: Some(FuzzLinux {
+                namespaces: vec![
+                    FuzzLinuxNamespace {
+                        type_: String::from("pid"),
+                        ..Default::default()
+                    },
+                    FuzzLinuxNamespace {
+                        type_: String::from("network"),
+                        ..Default::default()
+                    },
+                    FuzzLinuxNamespace {
+                        type_: String::from("ipc"),
+                        ..Default::default()
+                    },
+                    FuzzLinuxNamespace {
+                        type_: String::from("uts"),
+                        ..Default::default()
+                    },
+                    FuzzLinuxNamespace {
+                        type_: String::from("mount"),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
 }
 
 impl From<FuzzSpec> for oci_proto::Spec {
     fn from(f: FuzzSpec) -> Self {
         Self {
             Version: f.version.clone(),
-            Process: MessageField::some(f.process.into()),
-            Root: MessageField::some(f.root.into()),
+            Process: MessageField::from_option(f.process.map(Into::into)),
+            Root: MessageField::from_option(f.root.map(Into::into)),
             Hostname: f.host_name.clone(),
             Mounts: f.mounts.into_iter().map(Into::into).collect(),
-            Hooks: MessageField::some(f.hooks.into()),
+            Hooks: MessageField::from_option(f.hooks.map(Into::into)),
             Annotations: f.annotations.clone(),
-            Linux: MessageField::some(f.linux.into()),
+            Linux: MessageField::from_option(f.linux.map(Into::into)),
             ..Default::default()
         }
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzSharedMount {
     pub name: String,
     pub src_ctr: String,
@@ -776,14 +959,31 @@ impl From<FuzzSharedMount> for agent_proto::SharedMount {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
+pub struct FuzzKernelModule {
+    pub name: String,
+    pub parameters: Vec<String>,
+}
+
+impl From<FuzzKernelModule> for agent_proto::KernelModule {
+    fn from(f: FuzzKernelModule) -> Self {
+        Self {
+            name: f.name.clone(),
+            parameters: f.parameters.clone(),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzCreateContainerRequest {
+    #[arbitrary(with = rpc_util::arbitrary_container_id)]
     pub container_id: String,
     pub exec_id: String,
-    pub string_user: FuzzStringUser,
+    pub string_user: Option<FuzzStringUser>,
     pub devices: Vec<FuzzDevice>,
     pub storages: Vec<FuzzStorage>,
-    pub oci: FuzzSpec,
+    pub oci: Option<FuzzSpec>,
     pub sandbox_pidns: bool,
     pub shared_mounts: Vec<FuzzSharedMount>,
     pub stdin_port: u32,
@@ -796,10 +996,10 @@ impl From<FuzzCreateContainerRequest> for agent_proto::CreateContainerRequest {
         Self {
             container_id: f.container_id.clone(),
             exec_id: f.exec_id.clone(),
-            string_user: MessageField::some(f.string_user.into()),
+            string_user: MessageField::from_option(f.string_user.map(Into::into)),
             devices: f.devices.into_iter().map(Into::into).collect(),
             storages: f.storages.into_iter().map(Into::into).collect(),
-            OCI: MessageField::some(f.oci.into()),
+            OCI: MessageField::from_option(f.oci.map(Into::into)),
             sandbox_pidns: f.sandbox_pidns,
             shared_mounts: f.shared_mounts.into_iter().map(Into::into).collect(),
             stdin_port: f.stdin_port,
@@ -810,8 +1010,9 @@ impl From<FuzzCreateContainerRequest> for agent_proto::CreateContainerRequest {
     }
 }
 
-#[derive(Arbitrary, Debug, Clone)]
+#[derive(Arbitrary, Default, Debug, Clone)]
 pub struct FuzzRemoveContainerRequest {
+    #[arbitrary(with = rpc_util::arbitrary_container_id)]
     pub container_id: String,
     pub timeout: u32,
 }
@@ -821,6 +1022,67 @@ impl From<FuzzRemoveContainerRequest> for agent_proto::RemoveContainerRequest {
         Self {
             container_id: f.container_id.clone(),
             timeout: f.timeout,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Arbitrary, Default, Debug, Clone)]
+pub struct FuzzExecProcessRequest {
+    #[arbitrary(with = rpc_util::arbitrary_container_id)]
+    pub container_id: String,
+    pub exec_id: String,
+    pub string_user: Option<FuzzStringUser>,
+    pub process: Option<FuzzProcess>,
+}
+
+impl From<FuzzExecProcessRequest> for agent_proto::ExecProcessRequest {
+    fn from(f: FuzzExecProcessRequest) -> Self {
+        Self {
+            container_id: f.container_id.clone(),
+            exec_id: f.exec_id.clone(),
+            string_user: MessageField::from_option(f.string_user.map(Into::into)),
+            process: MessageField::from_option(f.process.map(Into::into)),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Arbitrary, Default, Debug, Clone)]
+pub struct FuzzStartContainerRequest {
+    pub container_id: String,
+}
+
+impl From<FuzzStartContainerRequest> for agent_proto::StartContainerRequest {
+    fn from(f: FuzzStartContainerRequest) -> Self {
+        Self {
+            container_id: f.container_id.clone(),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Arbitrary, Default, Debug, Clone)]
+pub struct FuzzCreateSandboxRequest {
+    pub hostname: String,
+    pub dns: Vec<String>,
+    pub storages: Vec<FuzzStorage>,
+    pub sandbox_pidns: bool,
+    pub sandbox_id: String,
+    pub guest_hook_path: String,
+    pub kernel_modules: Vec<FuzzKernelModule>,
+}
+
+impl From<FuzzCreateSandboxRequest> for agent_proto::CreateSandboxRequest {
+    fn from(f: FuzzCreateSandboxRequest) -> Self {
+        Self {
+            hostname: f.hostname.clone(),
+            dns: f.dns.clone(),
+            storages: f.storages.into_iter().map(Into::into).collect(),
+            sandbox_pidns: f.sandbox_pidns,
+            sandbox_id: f.sandbox_id.clone(),
+            guest_hook_path: f.guest_hook_path.clone(),
+            kernel_modules: f.kernel_modules.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }
