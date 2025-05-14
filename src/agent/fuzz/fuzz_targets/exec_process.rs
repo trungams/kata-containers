@@ -1,5 +1,7 @@
 #![no_main]
 
+use std::path::{Path, PathBuf};
+
 use kata_agent_fuzz::{fuzz_proto, rpc_util};
 use lazy_static::lazy_static;
 use libfuzzer_sys::{fuzz_target, Corpus};
@@ -37,12 +39,27 @@ fn initialize() {
             )
             .await?;
 
+        // pull image
+        let bundle =
+            rpc_util::pull_image("ghcr.io/linuxcontainers/alpine:latest", &CONTAINER_ID).unwrap();
+        let mut oci = fuzz_proto::FuzzSpec::sample_spec();
+        let path = PathBuf::from(&bundle)
+            .join(&"rootfs")
+            .into_os_string()
+            .into_string()
+            .unwrap();
+        oci.root = Some(fuzz_proto::FuzzRoot {
+            path: path,
+            readonly: true,
+            ..Default::default()
+        });
+
         agent
             .create_container(
                 &CTX,
                 fuzz_proto::FuzzCreateContainerRequest {
                     container_id: CONTAINER_ID.clone(),
-                    oci: Some(fuzz_proto::FuzzSpec::sample_spec()),
+                    oci: Some(oci),
                     ..Default::default()
                 }
                 .into(),
