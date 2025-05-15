@@ -55,7 +55,7 @@ pub fn random_container_id() -> String {
 // and returns the bundle path containing the rootfs (mounted by
 // the underlying snapshotter, overlayfs in this case) & config.json
 // Uses anonymous image registry authentication.
-pub fn pull_image(image: &str, cid: &str) -> Result<String> {
+pub async fn pull_image(image: &str, cid: &str) -> Result<String> {
     if image.is_empty() || cid.is_empty() {
         return Err(anyhow!("invalid image reference or container id"));
     }
@@ -69,10 +69,9 @@ pub fn pull_image(image: &str, cid: &str) -> Result<String> {
     let bundle_dir = scoped_join(CONTAINER_BASE_TEST, cid)?;
     fs::create_dir_all(bundle_dir.clone())?;
 
-    let _image_id = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()?
-        .block_on(image_client.pull_image(image, &bundle_dir, &None, &None))?;
+    image_client
+        .pull_image(image, &bundle_dir, &None, &None)
+        .await?;
 
     Ok(bundle_dir.as_path().display().to_string())
 }

@@ -1,6 +1,6 @@
 #![no_main]
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use kata_agent_fuzz::{fuzz_proto, rpc_util};
 use lazy_static::lazy_static;
@@ -27,7 +27,7 @@ fn initialize() {
 
     let agent = rpc_util::agent_service();
 
-    if let Err(e) = RT.block_on(async {
+    RT.block_on(async {
         agent
             .create_sandbox(
                 &CTX,
@@ -37,11 +37,13 @@ fn initialize() {
                 }
                 .into(),
             )
-            .await?;
+            .await
+            .expect("failed to create sandbox");
 
         // pull image
-        let bundle =
-            rpc_util::pull_image("ghcr.io/linuxcontainers/alpine:latest", &CONTAINER_ID).unwrap();
+        let bundle = rpc_util::pull_image("ghcr.io/linuxcontainers/alpine:latest", &CONTAINER_ID)
+            .await
+            .expect("failed to pull image");
         let mut oci = fuzz_proto::FuzzSpec::sample_spec();
         let path = PathBuf::from(&bundle)
             .join(&"rootfs")
@@ -64,23 +66,9 @@ fn initialize() {
                 }
                 .into(),
             )
-            .await?;
-
-        agent
-            .start_container(
-                &CTX,
-                fuzz_proto::FuzzStartContainerRequest {
-                    container_id: CONTAINER_ID.clone(),
-                    ..Default::default()
-                }
-                .into(),
-            )
-            .await?;
-
-        Ok::<(), TtrpcError>(())
-    }) {
-        panic!("Failed to set up fuzz target: {:?}", e);
-    }
+            .await
+            .expect("failed to create container");
+    });
 }
 
 fuzz_target!(
